@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { prisma } from '../db';
+import { publicImageUrl } from './storage';
 
 const cents = z.number().int().min(0).max(10_000_000);
 
@@ -130,6 +131,8 @@ export async function getSettings(): Promise<Settings> {
     const parsed = settingsSchemas[key].safeParse(merged);
     if (parsed.success) (value as Record<string, unknown>)[key] = parsed.data;
   }
+  value.store.logoUrl = publicImageUrl(value.store.logoUrl);
+  value.store.bannerUrl = publicImageUrl(value.store.bannerUrl);
   cache = { at: Date.now(), value };
   return value;
 }

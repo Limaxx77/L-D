@@ -77,9 +77,17 @@ export async function storeImage(buffer: Buffer, folder: 'products' | 'combos' |
     const file = path.join(uploadDir(), key);
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, data);
-    url = `${env.PUBLIC_API_URL.replace(/\/$/, '')}/uploads/${key}`;
+    // Endereço relativo: o site encaminha /uploads ao servidor (proxy do Vite / rewrite da Vercel).
+    url = `/uploads/${key}`;
   }
   return { key, url, mimeType: 'image/webp', sizeBytes: data.length, width: info.width, height: info.height };
+}
+
+/** Corrige endereços antigos de fotos locais (gravados com domínio absoluto) para o caminho relativo. */
+export function publicImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const m = /^https?:\/\/[^/]*\/uploads\/(.+)$/.exec(url);
+  return m ? `/uploads/${m[1]}` : url;
 }
 
 export async function deleteStoredImage(key: string) {

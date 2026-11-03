@@ -109,8 +109,8 @@ describe('administração do catálogo', () => {
     const jpg = await sharp({ create: { width: 1600, height: 1200, channels: 3, background: '#f5b301' } }).jpeg().toBuffer();
     const r = await admin.post(`/api/admin/catalog/products/${ids.pizza}/image`).set(H).attach('image', jpg, { filename: 'foto.jpg', contentType: 'image/jpeg' });
     expect(r.status, JSON.stringify(r.body)).toBe(200);
-    expect(r.body.url).toMatch(/\/uploads\/products\/.+\.webp$/);
-    const path = new URL(r.body.url).pathname;
+    expect(r.body.url).toMatch(/^\/uploads\/products\/.+\.webp$/); // relativo: independe do domínio
+    const path = r.body.url;
     const img = await request(app).get(path);
     expect(img.status).toBe(200);
     const meta = await sharp(img.body).metadata();

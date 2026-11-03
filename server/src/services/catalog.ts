@@ -3,6 +3,7 @@ import { prisma, type Tx } from '../db';
 import { comboReferenceSavings, optionLabel, type Catalog, type CatalogProduct } from '../lib/pricing';
 import { getSettings } from '../lib/settings';
 import { openState, type HourRange } from '../lib/hours';
+import { publicImageUrl } from '../lib/storage';
 
 const productInclude = {
   options: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
@@ -73,7 +74,7 @@ export function serializeProduct(p: ProductRow) {
     promoPriceCents: p.promoPriceCents,
     available: p.available && p.active && inStock,
     stockQty: p.stockQty,
-    imageUrl: p.images[0]?.url ?? null,
+    imageUrl: publicImageUrl(p.images[0]?.url),
     options: p.options.map((o) => ({
       id: o.id,
       label: optionLabel(o),
@@ -100,7 +101,7 @@ export function serializeCombo(c: ComboRow, refPastel: number, refDrink: number,
     available: c.available && c.active && remainingToday !== 0,
     dailyLimit: c.dailyLimit,
     remainingToday,
-    imageUrl: c.images[0]?.url ?? null,
+    imageUrl: publicImageUrl(c.images[0]?.url),
     regularCents: ref.regularCents,
     savingsCents: ref.savingsCents,
   };
