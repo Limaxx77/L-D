@@ -55,7 +55,10 @@ export function createApp() {
   });
 
   app.use(express.json({ limit: '200kb' }));
-  app.use('/uploads', express.static(uploadDir(), { maxAge: '365d', immutable: true, fallthrough: false }));
+  app.use('/uploads', express.static(uploadDir(), { maxAge: '365d', immutable: true }));
+  app.use('/uploads', (_req, res) => {
+    res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Imagem não encontrada.' } });
+  });
 
   app.get('/api/health', async (_req, res) => {
     await prisma.$queryRaw`SELECT 1`;
