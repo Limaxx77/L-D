@@ -79,7 +79,7 @@ export const DEFAULT_SETTINGS: Settings = {
     enabled: true,
     pickupEnabled: true,
     minOrderCents: null,
-    freeDeliveryAboveCents: null,
+    freeDeliveryAboveCents: 3500, // entrega grátis a partir de R$ 35,00
     allowOutsideArea: false,
     outsideAreaFeeCents: null,
     defaultPrepMinutes: 40,

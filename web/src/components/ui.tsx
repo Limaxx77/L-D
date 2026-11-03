@@ -19,18 +19,25 @@ export function Modal({
   dismissable?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // onClose costuma ser uma função nova a cada render; guardá-la em ref evita que o efeito
+  // rode a cada tecla digitada (o que roubava o foco do campo e fechava o teclado do celular).
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  const dismissRef = useRef(dismissable);
+  dismissRef.current = dismissable;
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && dismissable && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && dismissRef.current && closeRef.current();
     window.addEventListener('keydown', onKey);
-    ref.current?.focus();
+    // Foca a janela só ao abrir, e só se nenhum campo dentro dela já estiver em foco.
+    if (!ref.current?.contains(document.activeElement)) ref.current?.focus({ preventScroll: true });
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener('keydown', onKey);
     };
-  }, [open, onClose, dismissable]);
+  }, [open]);
   if (!open) return null;
   const width = { sm: 'sm:max-w-sm', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl', xl: 'sm:max-w-4xl' }[size];
   return (

@@ -157,7 +157,7 @@ function DeliveryTab({ value, onSave }: { value: S; onSave: (v: S) => void }) {
       <div className="card p-5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xl font-bold">Bairros atendidos</h2>
-          <button className="btn-ghost btn-sm" onClick={() => setEdit({ neighborhood: '', fee: '', min: '', active: true })}><Plus size={14} /> Bairro</button>
+          <button className="btn-ghost btn-sm" onClick={() => setEdit({ neighborhood: '', fee: '7,00', min: '', active: true })}><Plus size={14} /> Bairro</button>
         </div>
         {!areas ? <Spinner /> : (
           <ul className="divide-y divide-black/5 text-sm">

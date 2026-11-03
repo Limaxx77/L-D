@@ -123,7 +123,7 @@ describe('administração do catálogo', () => {
 
   it('configura bairro atendido', async () => {
     const admin = await staffAgent('admin@ld.test', 'senha-forte-123');
-    const r = await admin.post('/api/admin/delivery-areas').set(H).send({ neighborhood: 'Centro', feeCents: 500 });
+    const r = await admin.post('/api/admin/delivery-areas').set(H).send({ neighborhood: 'Centro', feeCents: 700 });
     expect(r.status).toBe(201);
     ids.centro = r.body.id;
   });
@@ -147,9 +147,21 @@ describe('Cenário A — delivery', () => {
   it('cotação calculada no servidor', async () => {
     const r = await request(app).post('/api/public/cart/quote').set(H).send({ type: 'DELIVERY', items: order().items, deliveryAreaId: ids.centro });
     expect(r.body.itemsTotalCents).toBe(77_00);
-    expect(r.body.deliveryFeeCents).toBe(5_00);
-    expect(r.body.totalCents).toBe(82_00);
+    expect(r.body.deliveryFeeCents).toBe(0); // entrega grátis a partir de R$ 35,00
+    expect(r.body.totalCents).toBe(77_00);
     expect(r.body.savingsCents).toBe(15_00);
+  });
+
+  it('cobra R$ 7,00 de entrega abaixo de R$ 35,00', async () => {
+    const small = [{ type: 'product', productId: ids.carne, quantity: 2 }];
+    const r = await request(app).post('/api/public/cart/quote').set(H).send({ type: 'DELIVERY', items: small, deliveryAreaId: ids.centro });
+    expect(r.body.itemsTotalCents).toBe(16_00);
+    expect(r.body.deliveryFeeCents).toBe(7_00);
+    expect(r.body.totalCents).toBe(23_00);
+    const limit = [{ type: 'product', productId: ids.carne, quantity: 5 }];
+    const r2 = await request(app).post('/api/public/cart/quote').set(H).send({ type: 'DELIVERY', items: limit, deliveryAreaId: ids.centro });
+    expect(r2.body.itemsTotalCents).toBe(40_00);
+    expect(r2.body.deliveryFeeCents).toBe(0);
   });
 
   it('ignora preços enviados pelo navegador', async () => {
@@ -158,7 +170,7 @@ describe('Cenário A — delivery', () => {
     (body as Record<string, unknown>).totalCents = 1;
     const r = await request(app).post('/api/public/orders').set(H).set('Idempotency-Key', 'price-tamper-0001').send(body);
     expect(r.status, JSON.stringify(r.body)).toBe(201);
-    expect(r.body.totalCents).toBe(82_00);
+    expect(r.body.totalCents).toBe(77_00);
     ids.tamperToken = r.body.publicToken;
   });
 
@@ -208,13 +220,13 @@ describe('Cenário A — delivery', () => {
     expect((await courier.get('/api/admin/orders/deliveries/mine')).body).toHaveLength(1);
     expect((await courier.post(`/api/admin/orders/${ids.orderId}/status`).set(H).send({ status: 'OUT_FOR_DELIVERY' })).status).toBe(200);
     expect((await courier.post(`/api/admin/orders/${ids.orderId}/status`).set(H).send({ status: 'DELIVERED' })).status).toBe(200);
-    expect((await atend.post(`/api/admin/orders/${ids.orderId}/payments`).set(H).send({ method: 'CASH', amountCents: 82_00 })).status).toBe(200);
+    expect((await atend.post(`/api/admin/orders/${ids.orderId}/payments`).set(H).send({ method: 'CASH', amountCents: 77_00 })).status).toBe(200);
 
     const admin = await staffAgent('admin@ld.test', 'senha-forte-123');
     const fin = await admin.get('/api/admin/finance/summary');
     expect(fin.status).toBe(200);
-    expect(fin.body.revenueCents).toBeGreaterThanOrEqual(82_00);
-    expect(fin.body.receivedCents).toBe(82_00);
+    expect(fin.body.revenueCents).toBeGreaterThanOrEqual(77_00);
+    expect(fin.body.receivedCents).toBe(77_00);
     const csv = await admin.get('/api/admin/finance/export.csv');
     expect(csv.text).toContain(`${ids.orderNumber};`);
     const pdf = await admin.get('/api/admin/finance/export.pdf').buffer(true).parse((res, cb) => {
@@ -237,7 +249,7 @@ describe('Cenário C — recusa com motivo', () => {
     const admin = await staffAgent('admin@ld.test', 'senha-forte-123');
     expect((await admin.post(`/api/admin/orders/${o.id}/refuse`).set(H).send({ reason: '' })).status).toBe(400);
     // pagamento PIX antecipado confirmado antes da recusa
-    await admin.post(`/api/admin/orders/${o.id}/payments`).set(H).send({ method: 'PIX', amountCents: 82_00 });
+    await admin.post(`/api/admin/orders/${o.id}/payments`).set(H).send({ method: 'PIX', amountCents: 77_00 });
     const r = await admin.post(`/api/admin/orders/${o.id}/refuse`).set(H).send({ reason: 'Produto indisponível' });
     expect(r.status).toBe(200);
     expect(r.body.status).toBe('CANCELED');
