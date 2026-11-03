@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+  <radialGradient id="crust" cx="50%" cy="35%" r="75%">
+    <stop offset="0" stop-color="#FFE08A"/><stop offset="0.55" stop-color="#F5B301"/><stop offset="1" stop-color="#C98500"/>
+  </radialGradient>
+  <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#EDE6D6"/></linearGradient>
+  <filter id="sh" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#5a3a00" flood-opacity="0.35"/></filter>
+</defs>
+  <rect width="512" height="512" rx="110" fill="#D7261E"/>
+  <g transform="translate(256 260) scale(1.15) translate(-256 -256)">
+    <path d="M86 300c0-96 76-172 170-172s170 76 170 172c0 15-10 24-26 24H112c-16 0-26-9-26-24z" fill="url(#crust)"/>
+    <path d="M110 304h292" stroke="#A86F00" stroke-width="14" stroke-linecap="round" stroke-dasharray="2 26"/>
+    <text x="256" y="420" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="78" fill="#fff">L&amp;D</text>
+  </g></svg>

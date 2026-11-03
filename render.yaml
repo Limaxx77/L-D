@@ -1,0 +1,54 @@
+# Blueprint do Render: API Node.js + PostgreSQL gerenciado.
+# Render → New → Blueprint → selecione este repositório.
+services:
+  - type: web
+    name: pastel-ld-api
+    runtime: node
+    region: ohio
+    plan: starter
+    rootDir: .
+    buildCommand: npm ci --include=dev && npm run build -w server
+    preDeployCommand: npm run migrate:deploy -w server
+    startCommand: npm start -w server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pastel-ld-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        sync: false # 64 caracteres hexadecimais — defina manualmente e guarde uma cópia
+      - key: PUBLIC_APP_URL
+        sync: false
+      - key: PUBLIC_API_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: STORAGE_DRIVER
+        value: s3
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_PUBLIC_BASE_URL
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+
+databases:
+  - name: pastel-ld-db
+    plan: basic-256mb
+    databaseName: pastelld
+    postgresMajorVersion: '16'

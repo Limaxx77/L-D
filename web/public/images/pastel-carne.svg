@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+<defs>
+  <radialGradient id="crust" cx="50%" cy="35%" r="75%">
+    <stop offset="0" stop-color="#FFE08A"/><stop offset="0.55" stop-color="#F5B301"/><stop offset="1" stop-color="#C98500"/>
+  </radialGradient>
+  <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#EDE6D6"/></linearGradient>
+  <filter id="sh" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#5a3a00" flood-opacity="0.35"/></filter>
+</defs>
+  <rect width="800" height="600" fill="#8F1612"/>
+  <circle cx="650" cy="90" r="160" fill="#F5B301" opacity="0.5"/><circle cx="120" cy="560" r="180" fill="#F5B301" opacity="0.4"/>
+  <ellipse cx="400" cy="440" rx="330" ry="70" fill="url(#plate)" filter="url(#sh)"/>
+  <g transform="translate(400 360) rotate(-2) scale(1.3)" filter="url(#sh)">
+    <path d="M-170 45 C-170 -60 -90 -120 0 -120 C90 -120 170 -60 170 45 C170 60 160 66 145 66 L-145 66 C-160 66 -170 60 -170 45Z" fill="url(#crust)"/>
+    <path d="M-150 40 C-140 -40 -80 -95 0 -98" stroke="#FFF2C4" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <circle cx="-80" cy="-40" r="9" fill="#FFE7A3" opacity="0.8"/><circle cx="-77.3" cy="-37.3" r="4.95" fill="#D99A00" opacity="0.35"/><circle cx="-30" cy="-75" r="7" fill="#FFE7A3" opacity="0.8"/><circle cx="-27.9" cy="-72.9" r="3.8500000000000005" fill="#D99A00" opacity="0.35"/><circle cx="40" cy="-60" r="10" fill="#FFE7A3" opacity="0.8"/><circle cx="43" cy="-57" r="5.5" fill="#D99A00" opacity="0.35"/><circle cx="95" cy="-20" r="6" fill="#FFE7A3" opacity="0.8"/><circle cx="96.8" cy="-18.2" r="3.3000000000000003" fill="#D99A00" opacity="0.35"/><circle cx="-110" cy="0" r="6" fill="#FFE7A3" opacity="0.8"/><circle cx="-108.2" cy="1.7999999999999998" r="3.3000000000000003" fill="#D99A00" opacity="0.35"/><circle cx="10" cy="-20" r="8" fill="#FFE7A3" opacity="0.8"/><circle cx="12.4" cy="-17.6" r="4.4" fill="#D99A00" opacity="0.35"/><circle cx="70" cy="15" r="7" fill="#FFE7A3" opacity="0.8"/><circle cx="72.1" cy="17.1" r="3.8500000000000005" fill="#D99A00" opacity="0.35"/><circle cx="-50" cy="10" r="5" fill="#FFE7A3" opacity="0.8"/><circle cx="-48.5" cy="11.5" r="2.75" fill="#D99A00" opacity="0.35"/><line x1="-150" y1="38" x2="-150" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="-125" y1="38" x2="-125" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="-100" y1="38" x2="-100" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="-75" y1="38" x2="-75" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="-50" y1="38" x2="-50" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="-25" y1="38" x2="-25" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="0" y1="38" x2="0" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="25" y1="38" x2="25" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="50" y1="38" x2="50" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="75" y1="38" x2="75" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="100" y1="38" x2="100" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="125" y1="38" x2="125" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/><line x1="150" y1="38" x2="150" y2="58" stroke="#A86F00" stroke-width="5" stroke-linecap="round" opacity="0.7"/>
+  </g><g transform="translate(560 300)">
+    <ellipse cx="0" cy="0" rx="70" ry="48" fill="#7A3B1D"/>
+    <ellipse cx="-18" cy="-8" rx="22" ry="12" fill="#A8572E" opacity="0.8"/>
+    <ellipse cx="24" cy="10" rx="18" ry="10" fill="#A8572E" opacity="0.6"/>
+  </g>
+  <text x="40" y="70" font-family="'Baloo 2', Arial Rounded MT Bold, sans-serif" font-weight="800" font-size="46" fill="#ffffff" opacity="0.95">Carne</text>
+</svg>

@@ -1,0 +1,652 @@
+// Pastel L&D — modelo de dados
+// Valores monetários são sempre armazenados em centavos (Int).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Usuários internos e permissões
+// ---------------------------------------------------------------------------
+
+enum RoleKey {
+  ADMIN
+  ATTENDANT
+  KITCHEN
+  COURIER
+}
+
+model Role {
+  key         RoleKey @id
+  name        String
+  description String
+  users       User[]
+
+  @@map("roles")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  roleKey      RoleKey
+  role         Role      @relation(fields: [roleKey], references: [key])
+  active       Boolean   @default(true)
+  tokenVersion Int       @default(0)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  acceptedOrders  Order[]              @relation("OrderAcceptedBy")
+  canceledOrders  Order[]              @relation("OrderCanceledBy")
+  deliveries      Order[]              @relation("OrderCourier")
+  statusChanges   OrderStatusHistory[]
+  auditLogs       AuditLog[]
+  confirmedPays   Payment[]            @relation("PaymentConfirmedBy")
+  closedSessions  TableSession[]       @relation("SessionClosedBy")
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Clientes
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id            String            @id @default(cuid())
+  name          String
+  phone         String            @unique // somente dígitos, com DDI (ex.: 5565992638816)
+  email         String?           @unique
+  passwordHash  String?
+  whatsappOptIn Boolean           @default(false)
+  tokenVersion  Int               @default(0)
+  anonymizedAt  DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  addresses     CustomerAddress[]
+  orders        Order[]
+  favorites     Favorite[]
+
+  @@map("customers")
+}
+
+model CustomerAddress {
+  id             String        @id @default(cuid())
+  customerId     String
+  customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  label          String?
+  street         String
+  number         String
+  neighborhood   String
+  complement     String?
+  reference      String?
+  deliveryAreaId String?
+  deliveryArea   DeliveryArea? @relation(fields: [deliveryAreaId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+
+  @@index([customerId])
+  @@map("customer_addresses")
+}
+
+model Favorite {
+  customerId String
+  productId  String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([customerId, productId])
+  @@map("favorites")
+}
+
+// ---------------------------------------------------------------------------
+// Catálogo
+// ---------------------------------------------------------------------------
+
+enum ProductKind {
+  PASTEL
+  DRINK
+  OTHER
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  sortOrder Int       @default(0)
+  active    Boolean   @default(true)
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model Product {
+  id              String          @id @default(cuid())
+  categoryId      String
+  category        Category        @relation(fields: [categoryId], references: [id])
+  kind            ProductKind
+  name            String
+  description     String          @default("")
+  priceCents      Int
+  promoPriceCents Int?
+  costCents       Int?            // custo opcional, para lucro estimado
+  available       Boolean         @default(true)
+  stockQty        Int?            // null = sem controle de estoque
+  sortOrder       Int             @default(0)
+  active          Boolean         @default(true)
+  deletedAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  options         ProductOption[]
+  images          ProductImage[]
+  orderItems      OrderItem[]
+  favorites       Favorite[]
+
+  @@index([categoryId, sortOrder])
+  @@map("products")
+}
+
+// Opções cadastráveis (ex.: refrigerante — marca, sabor, tamanho)
+model ProductOption {
+  id         String      @id @default(cuid())
+  productId  String
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  brand      String?
+  flavor     String?
+  size       String?
+  priceCents Int?        // null = usa o preço do produto
+  available  Boolean     @default(true)
+  sortOrder  Int         @default(0)
+  createdAt  DateTime    @default(now())
+  orderItems OrderItem[]
+
+  @@index([productId])
+  @@map("product_options")
+}
+
+model ProductImage {
+  id         String   @id @default(cuid())
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  comboId    String?
+  combo      Combo?   @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  storageKey String   @unique
+  url        String
+  mimeType   String
+  sizeBytes  Int
+  width      Int
+  height     Int
+  isPrimary  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([productId])
+  @@index([comboId])
+  @@map("product_images")
+}
+
+enum ComboSlotKind {
+  PASTEL
+  DRINK
+}
+
+model Combo {
+  id          String         @id @default(cuid())
+  name        String
+  description String         @default("")
+  priceCents  Int
+  dailyLimit  Int?
+  available   Boolean        @default(true)
+  active      Boolean        @default(true)
+  featured    Boolean        @default(false)
+  sortOrder   Int            @default(0)
+  deletedAt   DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  items       ComboItem[]
+  images      ProductImage[]
+  orderItems  OrderItem[]
+
+  @@map("combos")
+}
+
+// Regras de composição do combo: N pastéis (sabores livres) + M bebidas
+model ComboItem {
+  id       String        @id @default(cuid())
+  comboId  String
+  combo    Combo         @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  slot     ComboSlotKind
+  quantity Int
+
+  @@unique([comboId, slot])
+  @@map("combo_items")
+}
+
+// ---------------------------------------------------------------------------
+// Pedidos
+// ---------------------------------------------------------------------------
+
+enum OrderType {
+  DELIVERY
+  PICKUP
+  TABLE
+}
+
+enum OrderStatus {
+  AWAITING_ACCEPT
+  ACCEPTED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  PICKED_UP
+  SERVED
+  CANCELED
+}
+
+enum PaymentMethod {
+  PIX
+  CASH
+  DEBIT
+  CREDIT
+  IN_PERSON
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUND_PENDING
+  REFUNDED
+}
+
+model Order {
+  id                String         @id @default(cuid())
+  number            Int            @unique @default(autoincrement())
+  publicToken       String         @unique
+  idempotencyKey    String?        @unique
+  type              OrderType
+  status            OrderStatus    @default(AWAITING_ACCEPT)
+  customerId        String?
+  customer          Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerName      String
+  customerPhone     String?
+  whatsappOptIn     Boolean        @default(false)
+  // Endereço (cópia histórica do momento do pedido)
+  addressStreet     String?
+  addressNumber     String?
+  addressDistrict   String?
+  addressComplement String?
+  addressReference  String?
+  deliveryAreaId    String?
+  deliveryArea      DeliveryArea?  @relation(fields: [deliveryAreaId], references: [id], onDelete: SetNull)
+  // Valores (cópia histórica)
+  grossCents        Int            // soma dos itens a preço cheio
+  comboSavingsCents Int            @default(0)
+  itemsTotalCents   Int            // soma dos itens a preço praticado
+  couponId          String?
+  coupon            Coupon?        @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  couponCode        String?
+  discountCents     Int            @default(0)
+  deliveryFeeCents  Int            @default(0)
+  totalCents        Int
+  paymentMethod     PaymentMethod
+  paymentStatus     PaymentStatus  @default(PENDING)
+  changeForCents    Int?
+  notes             String?
+  scheduledFor      DateTime?
+  estimatedMinutes  Int?
+  acceptedAt        DateTime?
+  acceptedById      String?
+  acceptedBy        User?          @relation("OrderAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+  canceledAt        DateTime?
+  cancelReason      String?
+  canceledById      String?
+  canceledBy        User?          @relation("OrderCanceledBy", fields: [canceledById], references: [id], onDelete: SetNull)
+  canceledByCustomer Boolean       @default(false)
+  courierId         String?
+  courier           User?          @relation("OrderCourier", fields: [courierId], references: [id], onDelete: SetNull)
+  completedAt       DateTime?
+  // Mesa
+  tableSessionId    String?
+  tableSession      TableSession?  @relation(fields: [tableSessionId], references: [id], onDelete: Restrict)
+  placedByParticipantId String?
+  placedByParticipant   TableParticipant? @relation("ParticipantPlacedOrders", fields: [placedByParticipantId], references: [id], onDelete: SetNull)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  items             OrderItem[]
+  statusHistory     OrderStatusHistory[]
+  payments          Payment[]
+  notifications     WhatsappNotification[]
+
+  @@index([status, createdAt])
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([tableSessionId])
+  @@index([courierId, status])
+  @@map("orders")
+}
+
+enum OrderItemKind {
+  PRODUCT
+  COMBO
+}
+
+model OrderItem {
+  id               String           @id @default(cuid())
+  orderId          String
+  order            Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  kind             OrderItemKind
+  productId        String?
+  product          Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
+  optionId         String?
+  option           ProductOption?   @relation(fields: [optionId], references: [id], onDelete: SetNull)
+  comboId          String?
+  combo            Combo?           @relation(fields: [comboId], references: [id], onDelete: SetNull)
+  name             String           // nome histórico
+  description      String?          // ex.: "3x Carne, 2x Frango / 2x Coca-Cola"
+  selections       Json?            // composição do combo
+  quantity         Int
+  unitPriceCents   Int              // preço praticado (histórico)
+  unitRegularCents Int              // preço cheio (histórico), para economia
+  unitCostCents    Int?             // custo histórico (opcional)
+  totalCents       Int
+  notes            String?
+  canceledAt       DateTime?
+  cancelReason     String?
+  allocations      ItemAllocation[]
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([comboId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id         String       @id @default(cuid())
+  orderId    String
+  order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  note       String?
+  createdAt  DateTime     @default(now())
+
+  @@index([orderId, createdAt])
+  @@map("order_status_history")
+}
+
+// ---------------------------------------------------------------------------
+// Mesas, sessões (comandas) e divisão de conta
+// ---------------------------------------------------------------------------
+
+model Table {
+  id          String         @id @default(cuid())
+  name        String         // ex.: "Mesa 01"
+  number      Int            @unique
+  token       String         @unique // identificador seguro usado no link/NFC/QR
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  sessions    TableSession[]
+
+  @@map("tables")
+}
+
+enum TableSessionStatus {
+  OPEN
+  CLOSE_REQUESTED
+  CLOSED
+}
+
+enum SplitMode {
+  CONSUMPTION
+  EQUAL
+  CUSTOM
+}
+
+model TableSession {
+  id           String             @id @default(cuid())
+  tableId      String
+  table        Table              @relation(fields: [tableId], references: [id])
+  status       TableSessionStatus @default(OPEN)
+  splitMode    SplitMode          @default(CONSUMPTION)
+  splitConfig  Json?              // EQUAL: { participantIds } | CUSTOM: { items: { [itemId]: { [participantId]: peso } } }
+  openedAt     DateTime           @default(now())
+  closeRequestedAt DateTime?
+  closedAt     DateTime?
+  closedById   String?
+  closedBy     User?              @relation("SessionClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  forcedClose  Boolean            @default(false)
+  forcedReason String?
+  participants TableParticipant[]
+  orders       Order[]
+  payments     Payment[]
+
+  // Garantia "uma sessão aberta por mesa" via índice parcial na migração SQL.
+  @@index([tableId, status])
+  @@map("table_sessions")
+}
+
+model TableParticipant {
+  id             String           @id @default(cuid())
+  sessionId      String
+  session        TableSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name           String
+  deviceTokenHash String?         @unique // null = adicionado por outra pessoa/atendente (sem aparelho)
+  addedById      String?          // participante que adicionou
+  createdAt      DateTime         @default(now())
+  allocations    ItemAllocation[]
+  paymentAllocs  PaymentAllocation[]
+  placedOrders   Order[]          @relation("ParticipantPlacedOrders")
+
+  @@index([sessionId])
+  @@map("table_participants")
+}
+
+// Quem consumiu cada item (peso permite frações: 1/1 = meio a meio)
+model ItemAllocation {
+  id            String           @id @default(cuid())
+  orderItemId   String
+  orderItem     OrderItem        @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  participantId String
+  participant   TableParticipant @relation(fields: [participantId], references: [id], onDelete: Restrict)
+  weight        Int              @default(1)
+
+  @@unique([orderItemId, participantId])
+  @@map("item_allocations")
+}
+
+// ---------------------------------------------------------------------------
+// Pagamentos
+// ---------------------------------------------------------------------------
+
+enum PaymentRecordStatus {
+  PENDING
+  CONFIRMED
+  VOIDED
+}
+
+model Payment {
+  id             String              @id @default(cuid())
+  receiptNumber  Int                 @unique @default(autoincrement())
+  idempotencyKey String?             @unique
+  orderId        String?
+  order          Order?              @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  sessionId      String?
+  session        TableSession?       @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  method         PaymentMethod
+  amountCents    Int
+  changeForCents Int?
+  status         PaymentRecordStatus @default(PENDING)
+  provider       String?             // "manual" ou gateway futuro
+  providerRef    String?
+  notes          String?
+  confirmedById  String?
+  confirmedBy    User?               @relation("PaymentConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
+  confirmedAt    DateTime?
+  voidedAt       DateTime?
+  voidReason     String?
+  createdAt      DateTime            @default(now())
+  allocations    PaymentAllocation[]
+
+  @@index([orderId])
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id            String           @id @default(cuid())
+  paymentId     String
+  payment       Payment          @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  participantId String
+  participant   TableParticipant @relation(fields: [participantId], references: [id], onDelete: Restrict)
+  amountCents   Int
+
+  @@unique([paymentId, participantId])
+  @@map("payment_allocations")
+}
+
+// ---------------------------------------------------------------------------
+// Delivery, horários, configurações
+// ---------------------------------------------------------------------------
+
+model DeliveryArea {
+  id            String            @id @default(cuid())
+  neighborhood  String            @unique
+  feeCents      Int
+  minOrderCents Int?
+  active        Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  addresses     CustomerAddress[]
+  orders        Order[]
+
+  @@map("delivery_areas")
+}
+
+model BusinessHour {
+  id       String @id @default(cuid())
+  weekday  Int    // 0 = domingo ... 6 = sábado
+  opensAt  String // "HH:MM"
+  closesAt String // "HH:MM" (menor que opensAt = vira a madrugada)
+
+  @@index([weekday])
+  @@map("business_hours")
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model Coupon {
+  id            String     @id @default(cuid())
+  code          String     @unique
+  type          CouponType
+  value         Int        // percentual (0-100) ou centavos
+  validFrom     DateTime?
+  validUntil    DateTime?
+  maxUses       Int?
+  usedCount     Int        @default(0)
+  minOrderCents Int?
+  active        Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  orders        Order[]
+
+  @@map("coupons")
+}
+
+enum CouponType {
+  PERCENT
+  FIXED
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  category    String   @default("Geral")
+  amountCents Int
+  date        DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([date])
+  @@map("expenses")
+}
+
+// ---------------------------------------------------------------------------
+// Integrações, notificações e auditoria
+// ---------------------------------------------------------------------------
+
+model Integration {
+  id              String    @id // ex.: "whatsapp"
+  enabled         Boolean   @default(false)
+  config          Json      // dados não sensíveis
+  secretEncrypted String?   // credencial criptografada (AES-256-GCM) — nunca retornada à interface
+  status          String    @default("NOT_CONFIGURED")
+  lastError       String?
+  lastCheckedAt   DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  @@map("integrations")
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  SKIPPED
+}
+
+model WhatsappNotification {
+  id                String             @id @default(cuid())
+  orderId           String?
+  order             Order?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  event             String
+  toPhone           String
+  template          String?
+  body              String             // texto renderizado (também usado no link manual)
+  status            NotificationStatus @default(PENDING)
+  skipReason        String?
+  providerMessageId String?            @unique
+  attempts          Int                @default(0)
+  nextAttemptAt     DateTime?
+  lastError         String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([orderId])
+  @@map("whatsapp_notifications")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  actor     String   // "user:<id>", "customer:<id>", "participant:<id>", "system"
+  action    String
+  entity    String
+  entityId  String?
+  data      Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
