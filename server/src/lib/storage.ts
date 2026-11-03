@@ -52,7 +52,13 @@ function storageHint(name = '', status?: number, message = ''): string {
   if (/InvalidAccessKeyId|SignatureDoesNotMatch|AccessDenied|Unauthorized|invalid signature/i.test(n) || status === 403 || status === 401)
     return 'acesso negado — confira S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY e S3_REGION';
   if (/ENOTFOUND|getaddrinfo|ECONNREFUSED|Invalid URL/i.test(n)) return 'endereço inválido — confira S3_ENDPOINT';
-  if (/region/i.test(n)) return 'região incorreta — confira S3_REGION';
+  if (/region/i.test(n)) {
+    const expected = /expecting '([a-z0-9-]+)'|region[^a-z0-9]+([a-z]{2}-[a-z]+-\d)/i.exec(message);
+    const region = expected?.[1] || expected?.[2];
+    return region && region !== env.S3_REGION
+      ? `região incorreta — use S3_REGION=${region} (atual: ${env.S3_REGION})`
+      : `região incorreta — confira S3_REGION (atual: ${env.S3_REGION})`;
+  }
   return `${name || 'erro'}${status ? ` HTTP ${status}` : ''}`;
 }
 
