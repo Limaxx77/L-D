@@ -1,6 +1,20 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Minus, Plus, X, Loader2 } from 'lucide-react';
 
+/**
+ * Trava a rolagem da página enquanto houver alguma janela aberta. Usa um contador para que
+ * janelas abertas uma dentro da outra, fechadas em qualquer ordem, nunca deixem a página travada.
+ */
+let openModals = 0;
+function lockScroll() {
+  openModals++;
+  document.body.style.overflow = 'hidden';
+}
+function unlockScroll() {
+  openModals = Math.max(0, openModals - 1);
+  if (openModals === 0) document.body.style.overflow = '';
+}
+
 export function Modal({
   open,
   onClose,
@@ -27,14 +41,13 @@ export function Modal({
   dismissRef.current = dismissable;
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    lockScroll();
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && dismissRef.current && closeRef.current();
     window.addEventListener('keydown', onKey);
     // Foca a janela só ao abrir, e só se nenhum campo dentro dela já estiver em foco.
     if (!ref.current?.contains(document.activeElement)) ref.current?.focus({ preventScroll: true });
     return () => {
-      document.body.style.overflow = prev;
+      unlockScroll();
       window.removeEventListener('keydown', onKey);
     };
   }, [open]);
